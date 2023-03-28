@@ -1,96 +1,101 @@
 import React, { Component } from 'react';
-import { nanoid } from 'nanoid';
-import { load, save } from '../utils/storage';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
-import { Container, Title, ContactsTitle } from './App.styled';
-import { ContactForm } from 'components/ContactForm/ContactForm';
-import { ContactList } from 'components/ContactList/ContactList';
-import { Filter } from 'components/Filter/Filter';
+import { getPics } from 'components/services/pics-api.js';
+
+import { AppWrapper } from './App.styled';
+import { Button } from 'components/Button/Button.styled';
+
+import { Searchbar } from 'components/Searchbar/Searchbar';
+import { ImageGallery } from 'components/ImageGallery/ImageGallery';
+import { Loader } from 'components/Loader/Loader';
+// import { Button } from 'components/Button/Button';
 
 export class App extends Component {
   state = {
-    contacts: [
-      { id: 'id-1', name: 'Rosie Simpson', number: '459-12-56' },
-      { id: 'id-2', name: 'Hermione Kline', number: '443-89-12' },
-      { id: 'id-3', name: 'Eden Clements', number: '645-17-79' },
-      { id: 'id-4', name: 'Annie Copeland', number: '227-91-26' },
-    ],
-    filter: '',
+    page: 1,
+    searchQuery: '',
+    picsSet: [],
+    isloading: false,
+    error: null,
+    // status: 'idle',
   };
 
-  componentDidMount() {
-    const savedContacts = load('contacts');
-    if (savedContacts) {
-      this.setState({ contacts: savedContacts });
+  searchSubmit = searchQuery => {
+    this.setState({ searchQuery, page: 1 });
+    window.scrollTo(0, 0);
+  };
+
+  loadMore = () => {
+    this.setState(prevState => ({ page: prevState.page + 1 }));
+  };
+
+  componentDidUpdate(_, prevState) {
+    const prevQuery = prevState.searchQuery;
+    const nextQuery = this.state.searchQuery;
+
+    const prevPage = prevState.page;
+    const nextPage = this.state.page;
+    // console.log('prevPage', prevPage);
+    // console.log('nextPage :>> ', nextPage);
+
+    if (prevQuery !== nextQuery || prevPage !== nextPage) {
+      // console.log('searchQuery has changed');
+
+      // this.setState({ status: 'pending' });
+      this.setState({ isLoading: true });
+
+      getPics(nextQuery, nextPage)
+        .then(data => {
+          this.setState({
+            picsSet:
+              nextPage === 1 ? data.hits : [...prevState.picsSet, ...data.hits],
+          });
+          // this.setState({ picsSet: data.hits });
+        })
+        .catch(error => this.setState({ error }))
+        .finally(() => this.setState({ isLoading: false }));
     }
   }
-
-  componentDidUpdate(prevProps, prevState) {
-    if (this.state.contacts !== prevState.contacts) {
-      save('contacts', this.state.contacts);
-    }
-  }
-
-  checkName = name => {
-    const { contacts } = this.state;
-    const normalizedName = name.toLowerCase();
-    const foundName = contacts.find(
-      contact => contact.name.toLowerCase() === normalizedName
-    );
-    if (foundName) {
-      alert(`${name} is already in contacts.`);
-      return true;
-    }
-  };
-
-  addContact = ({ name, number }) => {
-    if (!this.checkName(name)) {
-      const contact = {
-        id: nanoid(),
-        name,
-        number,
-      };
-
-      this.setState(({ contacts }) => ({
-        contacts: [contact, ...contacts],
-      }));
-    }
-  };
-
-  deleteContact = contactId => {
-    return this.setState(({ contacts }) => ({
-      contacts: contacts.filter(contact => contact.id !== contactId),
-    }));
-  };
-
-  getFilteredContacts = () => {
-    const { contacts, filter } = this.state;
-    const normalizedFilter = filter.toLowerCase();
-    return contacts.filter(contact =>
-      contact.name.toLowerCase().includes(normalizedFilter)
-    );
-  };
-
-  changeFilter = e => {
-    this.setState({
-      filter: e.currentTarget.value,
-    });
-  };
 
   render() {
-    const { filter } = this.state;
-    const filteredContacts = this.getFilteredContacts();
+    const { picsSet, error, isLoading } = this.state;
+    console.log('picsSet', picsSet);
+    // if (status === 'idle') {
+    // }
+    // if (status === 'pending') {
+    //   return <Loader />;
+    // }
+    // if (status === 'rejected') {
+    //   return <h1>{error.message}</h1>;
+    // }
+    // if (status === 'resolved') {
+    //   return <ImageGallery items={picsSet} />;
+    // }
+
     return (
-      <Container>
-        <Title>Phonebook</Title>
-        <ContactForm onSubmitFormData={this.addContact} />
-        <Filter value={filter} onChangeFilter={this.changeFilter} />
-        <ContactsTitle>Contacts</ContactsTitle>
-        <ContactList
-          contacts={filteredContacts}
-          onDeleteContact={this.deleteContact}
-        />
-      </Container>
+      <AppWrapper>
+        <Searchbar onSubmit={this.searchSubmit} />
+        {error && <h1>{error.message}</h1>}
+        {/* <Loader /> */}
+        {picsSet && <ImageGallery items={this.state.picsSet} />}
+        {isLoading && <Loader />}
+        <Button onClick={this.loadMore} type="button">
+          Load more
+        </Button>
+        {/* <Modal /> */}
+        <ToastContainer autoClose={3000} />
+      </AppWrapper>
     );
   }
 }
+
+// <AppWrapper>
+//   {error && <h1>{error.message}</h1>}
+//   <Searchbar onSubmit={this.searchSubmit} />
+//   {loading && <h1>Loading..</h1>}
+//   {picsSet && <ImageGallery items={this.state.picsSet} />}
+
+//   <ToastContainer autoClose={3000} />
+// </AppWrapper>;
