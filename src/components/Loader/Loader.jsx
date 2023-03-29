@@ -1,6 +1,5 @@
 import { Circles } from 'react-loader-spinner';
-import { LoaderWrapper } from './Loader.styled';
-// import { LoaderWrapper } from 'components/Loader/Loader.styled';
+import { LoaderWrapper } from 'components/Loader/Loader.styled';
 
 export const Loader = () => {
   return (
@@ -16,6 +15,4 @@ export const Loader = () => {
       />
     </LoaderWrapper>
   );
-
-  // <LoaderWrapper>LOADING</LoaderWrapper>;
 };

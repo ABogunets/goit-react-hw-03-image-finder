@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import { ToastContainer } from 'react-toastify';
+import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
 import { getPics } from 'components/services/pics-api.js';
@@ -10,17 +10,45 @@ import { Button } from 'components/Button/Button.styled';
 import { Searchbar } from 'components/Searchbar/Searchbar';
 import { ImageGallery } from 'components/ImageGallery/ImageGallery';
 import { Loader } from 'components/Loader/Loader';
-// import { Button } from 'components/Button/Button';
+import { Modal } from 'components/Modal/Modal';
 
 export class App extends Component {
   state = {
     page: 1,
     searchQuery: '',
     picsSet: [],
+    largeImgPic: '',
+    totalHits: null,
     isloading: false,
     error: null,
-    // status: 'idle',
   };
+
+  componentDidUpdate(_, prevState) {
+    const prevQuery = prevState.searchQuery;
+    const nextQuery = this.state.searchQuery;
+    const prevPage = prevState.page;
+    const nextPage = this.state.page;
+
+    if (prevQuery !== nextQuery || prevPage !== nextPage) {
+      this.setState({ isLoading: true });
+
+      getPics(nextQuery, nextPage)
+        .then(data => {
+          this.setState({
+            picsSet:
+              nextPage === 1 ? data.hits : [...prevState.picsSet, ...data.hits],
+            totalHits: data.totalHits,
+          });
+          if (data.hits.length === 0 && nextPage === 1) {
+            toast.info(`Sorry, no pics on query "${nextQuery}"`);
+          }
+        })
+        .catch(error => this.setState({ error }))
+        .finally(() => {
+          this.setState({ isLoading: false });
+        });
+    }
+  }
 
   searchSubmit = searchQuery => {
     this.setState({ searchQuery, page: 1 });
@@ -31,71 +59,34 @@ export class App extends Component {
     this.setState(prevState => ({ page: prevState.page + 1 }));
   };
 
-  componentDidUpdate(_, prevState) {
-    const prevQuery = prevState.searchQuery;
-    const nextQuery = this.state.searchQuery;
+  onImgClick = largeImageURL => {
+    this.setState({ largeImgPic: largeImageURL });
+  };
 
-    const prevPage = prevState.page;
-    const nextPage = this.state.page;
-    // console.log('prevPage', prevPage);
-    // console.log('nextPage :>> ', nextPage);
-
-    if (prevQuery !== nextQuery || prevPage !== nextPage) {
-      // console.log('searchQuery has changed');
-
-      // this.setState({ status: 'pending' });
-      this.setState({ isLoading: true });
-
-      getPics(nextQuery, nextPage)
-        .then(data => {
-          this.setState({
-            picsSet:
-              nextPage === 1 ? data.hits : [...prevState.picsSet, ...data.hits],
-          });
-          // this.setState({ picsSet: data.hits });
-        })
-        .catch(error => this.setState({ error }))
-        .finally(() => this.setState({ isLoading: false }));
-    }
-  }
+  modalClose = () => {
+    this.setState({ largeImgPic: '' });
+  };
 
   render() {
-    const { picsSet, error, isLoading } = this.state;
-    console.log('picsSet', picsSet);
-    // if (status === 'idle') {
-    // }
-    // if (status === 'pending') {
-    //   return <Loader />;
-    // }
-    // if (status === 'rejected') {
-    //   return <h1>{error.message}</h1>;
-    // }
-    // if (status === 'resolved') {
-    //   return <ImageGallery items={picsSet} />;
-    // }
-
+    const { picsSet, error, isLoading, largeImgPic, totalHits } = this.state;
     return (
       <AppWrapper>
         <Searchbar onSubmit={this.searchSubmit} />
-        {error && <h1>{error.message}</h1>}
-        {/* <Loader /> */}
-        {picsSet && <ImageGallery items={this.state.picsSet} />}
+        {error && <h2>{error.message}</h2>}
+        {picsSet.length > 0 && (
+          <ImageGallery items={picsSet} onClick={this.onImgClick} />
+        )}
         {isLoading && <Loader />}
-        <Button onClick={this.loadMore} type="button">
-          Load more
-        </Button>
-        {/* <Modal /> */}
+        {!isLoading && picsSet.length > 0 && picsSet.length < totalHits && (
+          <Button onClick={this.loadMore} type="button">
+            Load more
+          </Button>
+        )}
+        {largeImgPic.length > 0 && (
+          <Modal largeImg={largeImgPic} onClose={this.modalClose} />
+        )}
         <ToastContainer autoClose={3000} />
       </AppWrapper>
     );
   }
 }
-
-// <AppWrapper>
-//   {error && <h1>{error.message}</h1>}
-//   <Searchbar onSubmit={this.searchSubmit} />
-//   {loading && <h1>Loading..</h1>}
-//   {picsSet && <ImageGallery items={this.state.picsSet} />}
-
-//   <ToastContainer autoClose={3000} />
-// </AppWrapper>;
