@@ -23,16 +23,16 @@ export class Searchbar extends Component {
       return;
     }
     this.props.onSubmit(this.state.searchQuery);
-    // this.reset(); // if needed to reset input
+    this.reset();
   };
 
   handleChange = e => {
     this.setState({ searchQuery: e.currentTarget.value.toLowerCase() });
   };
 
-  // reset = () => {
-  //   this.setState({ searchQuery: '' });
-  // };
+  reset = () => {
+    this.setState({ searchQuery: '' });
+  };
 
   render() {
     return (
